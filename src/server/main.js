@@ -4,7 +4,7 @@ import {EventSource} from 'eventsource';
 import * as dotenv from 'dotenv';
 import * as mariadb from 'mariadb';
 
-dotenv.config({ path: './src/server/.env' });
+dotenv.config({ path: './src/server/.env.local' });
 const {
     HEATPUMP_LISTENER_IP,
     PORT, HOST,
