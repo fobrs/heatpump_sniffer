@@ -1,0 +1,23 @@
+{
+  "name": "heatpump_sniffer",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/server/main.js -w src/server",
+    "start": "NODE_ENV=production node src/server/main.js",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10",
+    "vite": "^6.3.3"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "eventsource": "^4.1.0",
+    "express": "^5.2.1",
+    "forever": "^4.0.3",
+    "mariadb": "^3.5.1",
+    "vite-express": "^0.22.1"
+  }
+}
