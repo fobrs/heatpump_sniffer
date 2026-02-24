@@ -275,7 +275,9 @@ async function get_data(id)
   var errr = false;
   try {
       try {                        
-            var _sql =  sql`SELECT time, \`${id}\` FROM heatpump_modbus ORDER BY time ASC`;
+            // one day data with 30 sec interval
+            var _sql =  sql`SELECT time, \`${id}\` FROM heatpump_modbus ORDER BY time ASC LIMIT 2880`;
+           
             const rows = await conn.query(_sql);            
             var data = [];
             
