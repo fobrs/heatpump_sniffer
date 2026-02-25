@@ -80,7 +80,8 @@ async function prepare_db(id_object_dict)
   var errr = false;
   try {
     console_log("error",  "get connecttion...");
-      conn = await _pool_get_connection();
+      if (!conn || !conn.isValid())
+        conn = await _pool_get_connection();
       try {
           //const row = await conn.query(
             
@@ -169,7 +170,8 @@ async function save_to_db(id_object_dict, id_value_dict)
 {
   var errr = false;
   try {
-      
+    if (!conn || !conn.isValid())
+        conn = await _pool_get_connection();
     var arr = []
     var _sql;
   
@@ -241,6 +243,8 @@ async function get_metadata()
 {
   var errr = false;
   try {
+     if (!conn || !conn.isValid())
+        conn = await _pool_get_connection();
       try {                         
             var _sql =  sql`SELECT data FROM heatpump_modbus_metadata LIMIT 1`;
             const row = await conn.query(_sql);
@@ -274,6 +278,8 @@ async function get_data(id)
 {
   var errr = false;
   try {
+     if (!conn || !conn.isValid())
+        conn = await _pool_get_connection();
       try {                        
             // one day data with 30 sec interval
             var _sql =  sql`SELECT time, \`${id}\` FROM heatpump_modbus ORDER BY time ASC LIMIT 2880`;
