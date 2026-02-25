@@ -63,7 +63,7 @@ function setup_EventSource()
     eventSource.addEventListener('state', (e) => {
          const data = JSON.parse(e.data);
 
-        console.log("state: ", data.element);
+        //console.log("state: ", data.element);
 
         let value_span = document.getElementsByClassName(data.element.id)[0];
         
@@ -80,7 +80,7 @@ function setup_EventSource()
             metadata[data.element.id].chart.update();
         }
 
-        if (!data.element.name)
+        if (!data.initial)
         {
             //re order div to top
             let parent_div = value_span.parentElement;

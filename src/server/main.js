@@ -9,6 +9,7 @@ import { prepare_db, save_to_db, get_metadata, get_data } from './database.js' ;
 import { console_log } from './log.js' ;
 
 
+
 dotenv.config({ path: './src/server/.env.local' });
 const {
     HEATPUMP_LISTENER_IP,
@@ -85,10 +86,12 @@ app.get("/getState", (req, res) => {
     ids.forEach(element => { 
       let o = id_object_dict[element];
       
-
+     //console_log("error",  "TRUE sse.send: ", ((o.name) ? o.name : o.id) , o.value);
+ 
       sse.send(
       {
-        element: o
+        element: o,
+        initial: true
       },
       'state',
     );
@@ -144,8 +147,13 @@ setTimeout( async function ()
     const interval = setInterval(async function ()
     {
         if (changed_last_run > save_to_db_last_run)  {  
-          save_to_db_last_run = new Date();
-          await save_to_db(id_object_dict, id_value_dict);
+          var d = new Date();
+          let diff = (d - changed_last_run) / 1000;
+          console_log("debug", "Data changed ", diff, " seconds ago");
+          save_to_db_last_run = d;
+          console_log("error", "Saving to db...");
+          await save_to_db(id_object_dict, id_value_dict, diff);
+         
         }
       }
       , 30 * 1000);
@@ -159,8 +167,6 @@ es.addEventListener('state', async (event) =>  {
   const data = JSON.parse(event.data);
   try {
     var b = await parse_state(data);
-    if (b)
-       console_log("info", event.data);
   }
   catch (e)
   {
@@ -223,18 +229,20 @@ async function parse_state(data)
 
       if (changed || not_seen)
       {
-        changed = false;
+        if (changed)
+          changed_last_run = new Date();
+        //changed = false;
         //console_log("error", result);
-        if (!result.name)
+        if (changed)
         {
           console_log("error",  "changed: ", ((result.name) ? result.name : id_object_dict[result.id].name) , old_value, " -> ", result.value);
-          //changed = true;
-          changed_last_run = new Date();
-  
-        }   
+        }
+        //console_log("error", "NOT seen: ", not_seen, "CHANGED: ", changed);
+        //console_log("error",  "FALSE sse.send: ", ((result.name) ? result.name : id_object_dict[result.id].name) , result.value);
         sse.send(
           {
-            element: result
+            element: result,
+            initial: false
           },
           'state',
         );

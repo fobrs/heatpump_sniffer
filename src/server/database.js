@@ -178,7 +178,7 @@ async function prepare_db(id_object_dict)
 
 
 
-async function save_to_db(id_object_dict, id_value_dict)
+async function save_to_db(id_object_dict, id_value_dict, diff)
 {
   var errr = false;
   try {
@@ -325,10 +325,19 @@ ORDER BY id ASC;
             var _sql =  sql` SELECT time, \`${id}\` FROM heatpump_modbus WHERE ${where} ORDER BY time ASC`;
            
             const rows = await conn.query(_sql);            
+            
+            var last_row = null;
             var data = [];
             
             rows.forEach(row => {
-              data.push( { x: row.time.getTime(), y: row[id] });
+                if (last_row == null)
+                    last_row = row;
+                if (row.time.getTime() - last_row.time.getTime() >= 90 * 1000) 
+                {
+                    data.push( { x: row.time.getTime() - 1000, y: last_row[id] });
+                }
+                data.push( { x: row.time.getTime(), y: row[id] });
+                last_row = row;
             });
             return data;
         }

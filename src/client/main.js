@@ -109,6 +109,7 @@ for (const element of metadata_array) {
                         unit: 'hour',
                         time : { 
                             displayFormats: {
+                                second: 'HH:mm',
                                 minute: 'HH:mm',
                                 hour: 'HH:mm',
                                 day: 'DD MMM',
