@@ -2,19 +2,30 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/quatt.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Quatt App</title>
+    <title>Quatt Duo V2 Listener</title>
       <script type="module" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
     <script type="module" src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.2.0/chartjs-plugin-zoom.js"></script>
     <script type="module" src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script>
 
+    var selectDatetime_scale_fn = null;
+</script>
   </head>
   <body>
-     <h2>Quatt Listener</h2>
+     <h2>Quatt Duo V2 Listener</h2>
     <script type="module" src="/src/client/main.js"></script>
-   
+    <div class="datetime_scale_select">
+                        
+        <span><input type="radio" id="all" name="datetime_scale" value="all" onclick="selectDatetime_scale_fn(event, 4, true);">All</span>
+        <span><input type="radio" id="week" name="datetime_scale" value="week" onclick="selectDatetime_scale_fn(event, 3, true);" />Week</span>
+        <span><input type="radio" id="day" name="datetime_scale" value="day" onclick="selectDatetime_scale_fn(event, 2, true);" />Day</span>
+        <span><input type="radio" id="hour" name="datetime_scale" value="hour" onclick="selectDatetime_scale_fn(event, 1, true);" checked />Hour</span>
+        <span><input type="radio" id="quarter_hour" name="datetime_scale" value="quarter_hour" onclick="selectDatetime_scale_fn(event, 0, true);" checked />15 Min</span>
+  
+    </div>
     <div id="charts"></div>
   </body>
 </html>

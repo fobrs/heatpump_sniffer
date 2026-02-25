@@ -1,7 +1,10 @@
 import express from "express";
 import ViteExpress from "vite-express";
 import {EventSource} from 'eventsource';
+import bodyParser from 'body-parser';
 import * as dotenv from 'dotenv';
+import SSE from '@gazdagandras/express-sse';
+import session from 'express-session';
 import { prepare_db, save_to_db, get_metadata, get_data } from './database.js' ;
 import { console_log } from './log.js' ;
 
@@ -24,8 +27,73 @@ var do_fetch = false;
 
 const app = express();
 
-app.get("/hello", (req, res) => {
-  res.send("Hello Vite!");
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(session({
+    secret: 'secret-key'
+}));
+
+const sse = new SSE();
+
+var session_id = 0;
+
+var sessions_local_scope = {};
+
+app.get('/stream/meter', (req, res) => {
+
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    req.query.client = req.session.id;
+    session_id = req.session.id;
+    console_log("debug",  "session_id: " + session_id);
+    //sse.options.isCompressed = true;
+    sse.init(req, res);
+
+   
+    var ip;
+    var msg;
+    if (req.headers['x-forwarded-for'])
+         ip = req.headers['x-forwarded-for'];
+    else
+        ip = req.session.req.ip;
+
+    msg = "connection from " + ip +  " ...";
+    var local = false;
+    const pieces = ip.split('.');
+    if (pieces.length == 4)
+        if (pieces[0] = 192 && pieces[1] == 168)
+            local = true;
+
+    sessions_local_scope[session_id] = local;
+   
+    sse.sendToClient(
+        session_id,
+        {
+            clientID: session_id,
+            ip_address: ip
+        },
+        'clientID',
+    );
+    
+  });
+
+
+
+app.get("/getState", (req, res) => {
+
+  const ids = Object.keys(id_object_dict);
+      
+    ids.forEach(element => { 
+      let o = id_object_dict[element];
+      
+
+      sse.send(
+      {
+        element: o
+      },
+      'state',
+    );
+    });
+    res.send(true);
 });
 
 
@@ -43,13 +111,14 @@ app.get("/getMetadata", (req, res) => {
 app.get("/getData", (req, res) => {
 
   const id = req.query.id;
+  const scale = req.query.scale;
   if (!id)
   {
     res.status(400).send("Missing id parameter");
     return;
   }
 
-  get_data(id).then((data) => {
+  get_data(id, scale).then((data) => {
 
     res.send(data);
   }).catch((err) => {
@@ -107,9 +176,11 @@ async function parse_state(data)
 {
   // first call is with all data, then only with changed values,
   // so we need to store all values in a dict and check if they are changed or not.
+   let not_seen = false;
   if (!(data.id in id_object_dict))
   {
     id_object_dict[data.id] = data;
+    not_seen = true;
   }
     // replace first '-' with '/''
   var url = data.id.replace("-", "/");
@@ -125,6 +196,7 @@ async function parse_state(data)
       }
     
       let changed = false;
+     
       let old_value = "";
       if (result.id in id_value_dict)
       {
@@ -134,9 +206,13 @@ async function parse_state(data)
           old_value = id_value_dict[result.id];
         }
       }
-      id_value_dict[result.id] = result.value;
+      
 
-      if (changed)
+      id_value_dict[result.id] = result.value;
+      id_object_dict[result.id].value = result.value;
+      id_object_dict[result.id].state = result.state;
+
+      if (changed || not_seen)
       {
         changed = false;
         //console_log("error", result);
@@ -144,7 +220,14 @@ async function parse_state(data)
         {
           console_log("error",  "changed: ", ((result.name) ? result.name : id_object_dict[result.id].name) , old_value, " -> ", result.value);
           //changed = true;
-        }            
+  
+        }   
+        sse.send(
+          {
+            element: result
+          },
+          'state',
+        );
       }
       return changed;
     } catch (error) {

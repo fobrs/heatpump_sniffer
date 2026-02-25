@@ -3,7 +3,18 @@ import "./style.css";
 import { setupCounter } from "./counter.js";
 import javascriptLogo from "./javascript.svg";
 
+import { eventSource, setup_EventSource} from "./sse.js";
 
+
+const datetime_scale_quarter_hour = 0;
+const datetime_scale_hour = 1;
+const datetime_scale_day = 2;
+const datetime_scale_week = 3;
+const datetime_scale_all = 4;
+
+var datetime_scale = datetime_scale_quarter_hour;
+
+setup_EventSource();
 
 var res = await fetch("/getMetadata", {
                 method: "GET",
@@ -45,7 +56,7 @@ for (const element of metadata_array) {
 
     document.querySelector("#charts").innerHTML += `
       <div class="chart-container">
-        <b>${element.name}</b>
+        <b>${element.name} </b><span class="${element.id}" > </span><br>
         <canvas id="${element.id}" class="line-chart" width="1000" height="200"></canvas>
       </div>
     `;
@@ -54,7 +65,7 @@ for (const element of metadata_array) {
 
 for (const element of metadata_array) {
 
-    var res = await fetch("/getData?id=" + element.id , {
+    var res = await fetch("/getData?id=" + element.id + "&scale=" + datetime_scale, {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
@@ -110,3 +121,64 @@ for (const element of metadata_array) {
     metadata[element.id].chart.update();
 }
 
+
+res = await fetch("/getState", {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+resp = await res.json();
+
+
+document.addEventListener("visibilitychange", function() {
+  console.log(`Your page is  ${document.visibilityState}`);
+  if (document.visibilityState === 'hidden' && eventSource)
+  {
+        eventSource.close();
+  }
+  else
+  {
+        setup_EventSource();
+  }
+});
+
+
+selectDatetime_scale_fn = async function(event, s, clear, date_point)
+{
+    if (event)
+        event.stopPropagation();
+    console.log('selectDatetime_scale_fn '+ s);
+
+    datetime_scale = s;
+    for (const element of metadata_array) {
+
+        var res = await fetch("/getData?id=" + element.id + "&scale=" + datetime_scale, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+        var resp = await res.json();
+    
+
+        if (metadata[element.id].chart)
+        {
+            metadata[element.id].chart.data.datasets[0].data = resp;
+            metadata[element.id].chart.update();
+        }
+    }
+
+}
+
+
+
+export {
+    metadata,
+    datetime_scale_quarter_hour,
+    datetime_scale_hour,
+    datetime_scale_day,
+    datetime_scale_week,
+    datetime_scale_all
+
+ };

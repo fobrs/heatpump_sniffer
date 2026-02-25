@@ -2,6 +2,16 @@ import * as mariadb from 'mariadb';
 import * as dotenv from 'dotenv';
 import { console_log } from './log.js' ;
 
+
+
+
+const datetime_scale_quarter_hour = 0;
+const datetime_scale_hour = 1;
+const datetime_scale_day = 2;
+const datetime_scale_week = 3;
+const datetime_scale_all = 4;
+
+
 dotenv.config({ path: './src/server/.env.local' });
 const {
     HEATPUMP_LISTENER_IP,
@@ -274,15 +284,43 @@ async function get_metadata()
     }
 }
 
-async function get_data(id)
+async function get_data(id, scale)
 {
+    var Limit = 2;
+    switch (parseInt(scale))
+    {
+        case datetime_scale_quarter_hour:
+            Limit *= 15;
+            break;
+        case datetime_scale_hour:
+            Limit *= 60;
+              break;
+        case datetime_scale_day:
+            Limit *= (24 * 60);
+              break;
+        case datetime_scale_week:
+           Limit *= (7 * 24 * 60);
+             break;
+        case datetime_scale_all:
+             Limit = 1000000;
+               break;
+    }
+    console_log("database",  "get_data for id: "+ id + " with scale: " + scale + " and limit: " + Limit);
+
   var errr = false;
   try {
      if (!conn || !conn.isValid())
         conn = await _pool_get_connection();
       try {                        
             // one day data with 30 sec interval
-            var _sql =  sql`SELECT time, \`${id}\` FROM heatpump_modbus ORDER BY time ASC LIMIT 2880`;
+            /*
+            SELECT * FROM
+(
+ SELECT * FROM table ORDER BY id DESC LIMIT 50
+) AS sub
+ORDER BY id ASC;
+            */
+            var _sql =  sql` SELECT * FROM ( SELECT time, \`${id}\` FROM heatpump_modbus ORDER BY time DESC LIMIT ${Limit}) AS sub ORDER BY time ASC`;
            
             const rows = await conn.query(_sql);            
             var data = [];
