@@ -106,6 +106,17 @@ for (const element of metadata_array) {
                 scales: {
                     x: {
                         type: 'time',
+                        unit: 'hour',
+                        time : { 
+                            displayFormats: {
+                                minute: 'HH:mm',
+                                hour: 'HH:mm',
+                                day: 'DD MMM',
+                                week: 'DD MMM',
+                                month: 'MMM YYYY',
+                                year: 'YYYY'
+                            }
+                        },
                         distribution: 'linear',
                     },
                     y: {
