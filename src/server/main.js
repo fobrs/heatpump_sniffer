@@ -131,6 +131,8 @@ const server = app.listen(PORT, HOST, () =>
   console_log("info",  `App listening on ${HOST}:${PORT}`),
 );
 
+var save_to_db_last_run = new Date();
+var changed_last_run = save_to_db_last_run;
 
 setTimeout( async function ()
 {        
@@ -139,7 +141,14 @@ setTimeout( async function ()
     prepare_db_done = true;
     await prepare_db(id_object_dict); 
     await save_to_db(id_object_dict, id_value_dict);
-    const interval = setInterval(() => save_to_db(id_object_dict, id_value_dict) , 30 * 1000);
+    const interval = setInterval(async function ()
+    {
+        if (changed_last_run > save_to_db_last_run)  {  
+          save_to_db_last_run = new Date();
+          await save_to_db(id_object_dict, id_value_dict);
+        }
+      }
+      , 30 * 1000);
   }
 }, 10*1000);
 
@@ -220,6 +229,7 @@ async function parse_state(data)
         {
           console_log("error",  "changed: ", ((result.name) ? result.name : id_object_dict[result.id].name) , old_value, " -> ", result.value);
           //changed = true;
+          changed_last_run = new Date();
   
         }   
         sse.send(

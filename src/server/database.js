@@ -176,6 +176,8 @@ async function prepare_db(id_object_dict)
   }
 }
 
+
+
 async function save_to_db(id_object_dict, id_value_dict)
 {
   var errr = false;
@@ -286,26 +288,26 @@ async function get_metadata()
 
 async function get_data(id, scale)
 {
-    var Limit = 2;
+    var where = 2;
     switch (parseInt(scale))
     {
         case datetime_scale_quarter_hour:
-            Limit *= 15;
+            where = "time > DATE_SUB(NOW(), INTERVAL 15 MINUTE)";
             break;
         case datetime_scale_hour:
-            Limit *= 60;
+            where = "time > DATE_SUB(NOW(), INTERVAL 1 HOUR)";
               break;
         case datetime_scale_day:
-            Limit *= (24 * 60);
+            where = "time > DATE_SUB(NOW(), INTERVAL 1 DAY)";
               break;
         case datetime_scale_week:
-           Limit *= (7 * 24 * 60);
+           where = "time > DATE_SUB(NOW(), INTERVAL 1 WEEK)";
              break;
         case datetime_scale_all:
-             Limit = 1000000;
+             where = "1=1";
                break;
     }
-    console_log("database",  "get_data for id: "+ id + " with scale: " + scale + " and limit: " + Limit);
+   // console_log("database",  "get_data for id: "+ id + " with scale: " + scale + " and limit: " + Limit);
 
   var errr = false;
   try {
@@ -320,7 +322,7 @@ async function get_data(id, scale)
 ) AS sub
 ORDER BY id ASC;
             */
-            var _sql =  sql` SELECT * FROM ( SELECT time, \`${id}\` FROM heatpump_modbus ORDER BY time DESC LIMIT ${Limit}) AS sub ORDER BY time ASC`;
+            var _sql =  sql` SELECT time, \`${id}\` FROM heatpump_modbus WHERE ${where} ORDER BY time ASC`;
            
             const rows = await conn.query(_sql);            
             var data = [];
