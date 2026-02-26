@@ -5,7 +5,7 @@
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  background-color: #000000;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -52,4 +52,14 @@ h1 {
 .line-chart {
   display: block;
   width: 100%;
+}
+
+.datetime_scale_select {
+  margin-bottom: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+    canvas {
+        filter: invert(1) hue-rotate(180deg);
+    }
 }

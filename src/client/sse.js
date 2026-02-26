@@ -64,10 +64,18 @@ function setup_EventSource()
          const data = JSON.parse(e.data);
 
         //console.log("state: ", data.element);
-
-        let value_span = document.getElementsByClassName(data.element.id)[0];
         
-        value_span.innerHTML = data.element.state;
+        let value_span = document.getElementsByClassName(data.element.id)[0];
+        if (!value_span)
+            return;
+        if (data.previous_state != undefined)
+        {            
+             value_span.innerHTML = data.previous_state + (data.diff > 0 ? " ↗ " : " ↘ ") + data.element.state;
+        }
+        else
+        {
+            value_span.innerHTML = data.element.state;
+        }
 
 
         // add value to chart   
@@ -76,6 +84,15 @@ function setup_EventSource()
         {
             metadata[data.element.id].chart.data.datasets[0].data.shift();
             const d = new Date();
+            // copy last value to avoid gaps in chart when value does change
+            if (metadata[data.element.id].chart.data.datasets[0].data.length > 0 &&
+                metadata[data.element.id].chart.data.datasets[0].data[metadata[ data.element.id].chart.data.datasets[0].data.length - 1].x
+                 - d.getTime() > 60 * 1000) // if last value is older than 1 minute, add a copy of it to avoid gaps in chart
+            {
+                metadata[data.element.id].chart.data.datasets[0].data.push({x: d.getTime() - 1000, y:
+                    metadata[data.element.id].chart.data.datasets[0].data[
+                        metadata[data.element.id].chart.data.datasets[0].data.length - 1].y});
+            }
             metadata[data.element.id].chart.data.datasets[0].data.push({x: d.getTime(), y: data.element.value});
             metadata[data.element.id].chart.update();
         }

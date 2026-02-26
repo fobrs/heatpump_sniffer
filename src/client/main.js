@@ -57,7 +57,7 @@ for (const element of metadata_array) {
     document.querySelector("#charts").innerHTML += `
       <div class="chart-container">
         <b>${element.name} </b><span class="${element.id}" > </span><br>
-        <canvas id="${element.id}" class="line-chart" width="1000" height="200"></canvas>
+        <canvas id="${element.id}" class="line-chart" width="600" height="150"></canvas>
       </div>
     `;
  
@@ -106,7 +106,7 @@ for (const element of metadata_array) {
                 scales: {
                     x: {
                         type: 'time',
-                        unit: 'hour',
+                        unit: 'day',
                         time : { 
                             displayFormats: {
                                 second: 'HH:mm',
@@ -118,10 +118,21 @@ for (const element of metadata_array) {
                                 year: 'YYYY'
                             }
                         },
+                        ticks: {
+                            maxRotation: 0,
+                            gridLines: {
+                                color: 'rgba(133, 29, 133, 0.2)'
+                            },
+                        },
                         distribution: 'linear',
                     },
                     y: {
-                        beginAtZero: true
+                        beginAtZero: true,
+                        ticks: {
+                            gridLines: {
+                                color: 'rgba(133, 29, 133, 0.2)'
+                            },
+                        },     
                     }
                 }
             }

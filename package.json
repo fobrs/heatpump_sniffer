@@ -21,6 +21,7 @@
     "express-session": "^1.19.0",
     "express-sse": "^1.0.0",
     "forever": "^4.0.3",
+    "hap-controller": "^0.10.2",
     "mariadb": "^3.5.1",
     "vite-express": "^0.22.1"
   }

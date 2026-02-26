@@ -1,4 +1,4 @@
-const g_level = 6;
+const g_level = 1;
 var g_levels = ["error", "info", "warning", "database", "debug", "all"];
 var logCopy = console.log.bind(console);
 

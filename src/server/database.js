@@ -21,6 +21,7 @@ const {
 
 
 var conn = null;
+var fields = []; // field names in cardinal order, get from database to be sure of correct order when insert data
 
 const pool = mariadb.createPool({
     host: DATABASE_HOST,
@@ -93,61 +94,72 @@ async function prepare_db(id_object_dict)
       if (!conn || !conn.isValid())
         conn = await _pool_get_connection();
       try {
-          //const row = await conn.query(
-            
-          var _sql =  sql`CREATE TABLE IF NOT EXISTS \`heatpump_modbus\` (
-                \`id\` int(11) UNSIGNED NOT NULL auto_increment,
-                \`time\` datetime NOT NULL default current_timestamp,
-                `;
-          const ids = Object.keys(id_object_dict);
+            //const row = await conn.query(
+                
+            var _sql =  sql`CREATE TABLE IF NOT EXISTS \`heatpump_modbus\` (
+                    \`id\` int(11) UNSIGNED NOT NULL auto_increment,
+                    \`time\` datetime NOT NULL default current_timestamp,
+                    `;
+            const ids = Object.keys(id_object_dict);
 
-          ids.forEach(element => {
-            let o = id_object_dict[element];
-            //console_log("database",  o, id_object_dict[o]);
-            let Type = "VARCHAR(32)";
-            if (o.id && o.id.startsWith("binary"))
-            {
-              Type = "BOOLEAN";
-            }
-            else if (o.id && o.id.startsWith("text"))
-            {
-              Type = "VARCHAR(32)";
-            }
-            else if (o.id && o.id.startsWith("switch"))
-            {
-              Type = "BOOLEAN";
-            }
-            else if (o.id && o.id.startsWith("sensor"))
-            {
-              Type = "FLOAT";
-            }
-            else if (o.id && o.id.startsWith("number"))
-            {
-              Type = "FLOAT";
-            }
-            else if (o.id && o.id.startsWith("select"))
-            {
-              Type = "VARCHAR(32)";
-            }
-            _sql += `\`${o.id}\` ${Type} NULL DEFAULT NULL,
-            `
-          });    
+            ids.forEach(element => {
+                let o = id_object_dict[element];
+                //console_log("database",  o, id_object_dict[o]);
+                let Type = "VARCHAR(32)";
+                if (o.id && o.id.startsWith("binary"))
+                {
+                Type = "BOOLEAN";
+                }
+                else if (o.id && o.id.startsWith("text"))
+                {
+                Type = "VARCHAR(32)";
+                }
+                else if (o.id && o.id.startsWith("switch"))
+                {
+                Type = "BOOLEAN";
+                }
+                else if (o.id && o.id.startsWith("sensor"))
+                {
+                Type = "FLOAT";
+                }
+                else if (o.id && o.id.startsWith("number"))
+                {
+                Type = "FLOAT";
+                }
+                else if (o.id && o.id.startsWith("select"))
+                {
+                Type = "VARCHAR(32)";
+                }
+                _sql += `\`${o.id}\` ${Type} NULL DEFAULT NULL,            `
+            });    
 
-          _sql += `PRIMARY KEY (\`id\`) USING BTREE,
-          UNIQUE INDEX \`time\` (\`time\`) USING BTREE ) ENGINE=InnoDB COLLATE='utf8mb3_general_ci';`;
+            _sql += `PRIMARY KEY (\`id\`) USING BTREE,
+            UNIQUE INDEX \`time\` (\`time\`) USING BTREE ) ENGINE=InnoDB COLLATE='utf8mb3_general_ci';`;
 
-          //console_log("database",  _sql);
-          const row = await conn.query(_sql);
+            //console_log("database",  _sql);
+            const row = await conn.query(_sql);
 
-          _sql =  sql`CREATE TABLE IF NOT EXISTS \`heatpump_modbus_metadata\` (
-               \`data\` JSON NULL DEFAULT NULL
-               ) ENGINE=InnoDB COLLATE='utf8mb3_general_ci';`;
-          const  row2 = await conn.query(_sql);
+            _sql =  sql`CREATE TABLE IF NOT EXISTS \`heatpump_modbus_metadata\` (
+                \`data\` JSON NULL DEFAULT NULL
+                ) ENGINE=InnoDB COLLATE='utf8mb3_general_ci';`;
+            const  row2 = await conn.query(_sql);
 
-          _sql =  sql`DELETE FROM heatpump_modbus_metadata`;
-          const  row4 = await conn.query(_sql);
-          _sql =  sql`INSERT IGNORE INTO heatpump_modbus_metadata (data) VALUES (?)`;
-          const  row3 = await conn.query(_sql, [JSON.stringify(id_object_dict)]);
+            if (id_object_dict != null && Object.keys(id_object_dict).length > 0)
+            {
+                _sql =  sql`DELETE FROM heatpump_modbus_metadata`;
+                const  row4 = await conn.query(_sql);
+                _sql =  sql`INSERT IGNORE INTO heatpump_modbus_metadata (data) VALUES (?)`;
+                const  row3 = await conn.query(_sql, [JSON.stringify(id_object_dict)]);
+            }
+
+            // get fields in cardinal order
+            _sql =  sql`SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'heatpump_modbus' ORDER BY ORDINAL_POSITION`;
+            const  row5 = await conn.query(_sql);
+            var fields = [];
+            row5.forEach(row => {
+                fields.push(row.COLUMN_NAME);
+            });
+            //console_log("database",  "Fields in cardinal order: ", fields);
       }
       catch (err) {
           errr = true;
@@ -176,7 +188,7 @@ async function prepare_db(id_object_dict)
   }
 }
 
-
+var ids_in_cardinal_order = [];
 
 async function save_to_db(id_object_dict, id_value_dict, diff)
 {
@@ -192,12 +204,22 @@ async function save_to_db(id_object_dict, id_value_dict, diff)
           //console_log("database",  id_value_dict);
           let obj = [];
           let values = "";
-
-          const ids = Object.keys(id_object_dict);
+          if (ids_in_cardinal_order.length == 0)
+          {
+            const ids = Object.keys(id_object_dict);
+            // order ids by fields in database to be sure of correct order when insert data
+            ids.sort((a, b) => {
+                let indexA = fields.indexOf(a);
+                let indexB = fields.indexOf(b);
+                return indexA - indexB;
+            });
+            //console_log("database",  "Sorted ids: ", ids);
+            ids_in_cardinal_order = ids;
+          }
 
           obj.push(new Date);
           
-          ids.forEach(element => { 
+          ids_in_cardinal_order.forEach(element => { 
             let o = id_object_dict[element];
             obj.push(id_value_dict[element]);
             values += "?, ";  
@@ -216,9 +238,7 @@ async function save_to_db(id_object_dict, id_value_dict, diff)
 
           //console_log("database",  arr);
 
-          _sql = sql`
-              INSERT INTO heatpump_modbus values (${values})`
-
+          _sql = sql`INSERT INTO heatpump_modbus values (${values})`
 
           const row = await conn.query(_sql, arr)
              
