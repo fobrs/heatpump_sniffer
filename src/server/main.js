@@ -7,126 +7,16 @@ import SSE from '@gazdagandras/express-sse';
 import session from 'express-session';
 import { prepare_db, save_to_db, get_metadata, get_data } from './database.js' ;
 import { console_log } from './log.js' ;
-import readline from "node:readline/promises";
+import { subscribe_to_T6 } from './homekit.js' ;
 
-const rl = readline.createInterface({
-  terminal: true,
-  input: process.stdin,
-  output: process.stdout,
-});
 dotenv.config({ path: './src/server/.env.local' });
 const {
     HEATPUMP_LISTENER_IP,
-    PORT, HOST,
-    DATABASE_HOST, DATABASE_USER, DATABASE_PASSWORD, DATABASE_PORT, DATABASE_SCHEMA,
-    AccessoryPairingID, AccessoryLTPK, iOSDevicePairingID, iOSDeviceLTSK, iOSDeviceLTPK
+    PORT, HOST
  } = process.env;
 
-
-const pairingData = {
-  "AccessoryPairingID": AccessoryPairingID,
-  "AccessoryLTPK": AccessoryLTPK,
-  "iOSDevicePairingID": iOSDevicePairingID,
-  "iOSDeviceLTSK": iOSDeviceLTSK,
-  "iOSDeviceLTPK": iOSDeviceLTPK
-}
-
-import { HttpClient, IPDiscovery } from 'hap-controller';
-
-const discovery = new IPDiscovery();
-
-var paired = true;
-
-const characteristics = [
-    '1.277', // aid.iid , Current Temperature	00000011-0000-1000-8000-0026BB765291
-     '1.278', // aid.iid , Target Temperature	00000035-0000-1000-8000-0026BB765291
-];
-
-const characteristics_set_on = {
-     '1.278': 19.5 // aid.iid , Target Temperature	00000035-0000-1000-8000-0026BB765291
-};
-const characteristics_set_off = {
-     '1.278': 19.5 // aid.iid , Target Temperature	00000035-0000-1000-8000-0026BB765291
-};
-
-
-discovery.on('serviceUp', async (service) => {
-    console.log(`Found device: ${service.name}`);
-
-    const client = new HttpClient(service.id, service.address, service.port, pairingData, {
-        usePersistentConnections: true,
-    });
-
-    let count = 0;
-    client.on('event', async (ev) => {
-        console_log("info", `Event: ${JSON.stringify(ev, null, 2)}`);
-
-        if (false && ++count >= 2) {
-            try {
-                await client.unsubscribeCharacteristics(characteristics);
-                client.close();
-                console.log(`${service.name}: Unsubscribed!`);
-            } catch (e) {
-                console.error(`${service.name}:`, e);
-            }
-        }
-    });
-
-    client.on('event-disconnect', async (formerSubscribes) => {
-        console.log(`Disconnected: ${JSON.stringify(formerSubscribes, null, 2)}`);
-        // resubscribe if wanted:
-        try {
-            // a disconnect can happen if the device was disconnected from the network
-            // so you have to catch any network errors here
-            await client.subscribeCharacteristics(formerSubscribes);
-        } catch (e) {
-            console.error('error while resubscribing', e);
-            // if the discovery will detect the device again it will fire a new serviceUp event
-        }
-    });
-
-
-    try {
-        const subscribed_c = await client.getSubscribedCharacteristics();
-        console.log(`${service.name}: Subscribed to:`, subscribed_c);
-    } catch (e) {
-        console.error(`${service.name}:`, e);
-    }
-
-    try {
-        await client.subscribeCharacteristics(characteristics);
-        console.log(`${service.name}: Subscribed!`);
-    } catch (e) {
-        console.error(`${service.name}:`, e);
-    }
-    // target temp
-
-      try {
-        await client.setCharacteristics(characteristics_set_on);
-        client.close();
-        console.log(`${service.name}: done!`);
-    } catch (e) {
-        console.error(`${service.name}:`, e);
-    }
-});
-
-discovery.start();
-
-
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-//paired = true;
-while (!paired)
-{
-  await sleep(1000);
-}
-
-console.log("Paired, starting server...");
-
-
-
-
+// get data from thermostat and subscribe to changes
+await subscribe_to_T6();
 
 var prepare_db_done = false;
 
@@ -273,13 +163,14 @@ const es = new EventSource(`http://${HEATPUMP_LISTENER_IP}/events`)
 
 es.addEventListener('state', async (event) =>  {
 
-  const data = JSON.parse(event.data);
+  
   try {
+    const data = JSON.parse(event.data);
     var b = await parse_state(data);
   }
   catch (e)
   {
-    console_log("error", "JSON exception: ", event.data); 
+    console_log("error", "JSON exception: ", e, event.data); 
   }
   finally
   {

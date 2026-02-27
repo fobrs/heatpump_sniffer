@@ -6,6 +6,7 @@ export default defineConfig({
     server: {
         allowedHosts: [  "quatt.bigroses.net"],
         strictPort: true,
+        ws : false,
         hmr: {
             
             clientPort: 4000,

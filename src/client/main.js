@@ -82,7 +82,7 @@ for (const element of metadata_array) {
                     label: '',//element.name,
                     borderColor: 'rgba(75, 192, 192, 1)',
                     borderWidth: 1,
-                    pointRadius: 0,
+                    pointRadius: datetime_scale <= datetime_scale_hour ? 2 : 0,
 
                     fill: false
                 }]
@@ -163,6 +163,7 @@ document.addEventListener("visibilitychange", function() {
   else
   {
         setup_EventSource();
+        reload_data();
   }
 });
 
@@ -187,6 +188,7 @@ selectDatetime_scale_fn = async function(event, s, clear, date_point)
 
         if (metadata[element.id].chart)
         {
+            metadata[element.id].chart.data.datasets[0].pointRadius = datetime_scale <= datetime_scale_hour ? 2 : 0;
             metadata[element.id].chart.data.datasets[0].data = resp;
             metadata[element.id].chart.update();
         }
@@ -194,14 +196,19 @@ selectDatetime_scale_fn = async function(event, s, clear, date_point)
 
 }
 
+async function reload_data()
+{
+     await selectDatetime_scale_fn(null, datetime_scale);
+}
 
 
 export {
     metadata,
+    datetime_scale,
     datetime_scale_quarter_hour,
     datetime_scale_hour,
     datetime_scale_day,
     datetime_scale_week,
-    datetime_scale_all
-
+    datetime_scale_all,
+    reload_data
  };
