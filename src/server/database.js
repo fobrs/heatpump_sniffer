@@ -8,8 +8,9 @@ import { console_log } from './log.js' ;
 const datetime_scale_quarter_hour = 0;
 const datetime_scale_hour = 1;
 const datetime_scale_day = 2;
-const datetime_scale_week = 3;
-const datetime_scale_all = 4;
+const datetime_scale_yesterday = 3;
+const datetime_scale_week = 4;
+const datetime_scale_all = 5;
 
 
 dotenv.config({ path: './src/server/.env.local' });
@@ -306,27 +307,42 @@ async function get_metadata()
     }
 }
 
-async function get_data(id, scale)
+async function get_data(id, scale, datepoint)
 {
-    var where = 2;
+    let dp = Math.abs(datepoint);
+    var where = "1=1";
     switch (parseInt(scale))
     {
         case datetime_scale_quarter_hour:
-            where = "time > DATE_SUB(NOW(), INTERVAL 15 MINUTE)";
+        {
+            let s = 15 * (dp + 1);
+            let e = 15 * (dp);
+            where = `time >= DATE_SUB(NOW(), INTERVAL ${s} MINUTE) AND time < DATE_SUB(NOW(), INTERVAL ${e} MINUTE)`;
             break;
-        case datetime_scale_hour:
-            where = "time > DATE_SUB(NOW(), INTERVAL 1 HOUR)";
+        }
+        case datetime_scale_hour: {
+            let s = 1 * (dp + 1);
+            let e = 1 * (dp);
+            where = `time >= DATE_SUB(NOW(), INTERVAL ${s}  HOUR) AND  time < DATE_SUB(NOW(), INTERVAL ${e} HOUR)`;
               break;
-        case datetime_scale_day:
-            where = "time > DATE_SUB(NOW(), INTERVAL 1 DAY)";
-              break;
-        case datetime_scale_week:
-           where = "time > DATE_SUB(NOW(), INTERVAL 1 WEEK)";
+        }
+        case datetime_scale_day: {
+            let s = 1 * (dp + 1);
+            let e = 1 * (dp);
+            where = `time >= DATE_SUB(NOW(), INTERVAL ${s}  DAY) AND time < DATE_SUB(NOW(), INTERVAL ${e} DAY)`;
+            break;
+        }
+        case datetime_scale_week:{
+            let s = 1 * (dp + 1);
+            let e = 1 * (dp);
+            where = `time >= DATE_SUB(NOW(), INTERVAL ${s}  WEEK) AND time < DATE_SUB(NOW(), INTERVAL ${e} WEEK)`;
              break;
-        case datetime_scale_all:
-             where = "1=1";
-               break;
+        }
+       // case datetime_scale_all:
+       //      where = "1=1";
+       //        break;
     }
+    // console_log("error", "datepoint: " + dp, where);
    // console_log("database",  "get_data for id: "+ id + " with scale: " + scale + " and limit: " + Limit);
 
   var errr = false;

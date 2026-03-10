@@ -7,7 +7,8 @@ import SSE from '@gazdagandras/express-sse';
 import session from 'express-session';
 import { prepare_db, save_to_db, get_metadata, get_data } from './database.js' ;
 import { console_log } from './log.js' ;
-import { subscribe_to_T6 } from './homekit.js' ;
+import { subscribe_to_T6, T6_remove_pairing } from './homekit.js' ;
+import  process from 'node:process';
 
 dotenv.config({ path: './src/server/.env.local' });
 const {
@@ -16,7 +17,34 @@ const {
  } = process.env;
 
 // get data from thermostat and subscribe to changes
-await subscribe_to_T6();
+//await subscribe_to_T6();
+
+
+process.stdin.resume();
+
+
+process.on('SIGHUP', function() {
+    console_log("error", "Caught HUP  interrupt signal");
+})
+process.on('SIGQUIT', function() {
+    console_log("error", "Caught QUIT interrupt signal");
+})
+process.on('SIGINT', async function() {
+    console_log("error", "Caught INT interrupt signal");
+    //await T6_remove_pairing();
+
+    process.exitCode = 1;
+    process.kill();
+});
+
+process.on('SIGTERM', function() {
+    console_log("error", "Caught TERM interrupt signal");
+});
+
+
+process.on('exit',() => {
+    console_log("error", "process.exit() method is fired")
+})
 
 var prepare_db_done = false;
 
@@ -101,7 +129,7 @@ app.get("/getState", (req, res) => {
 
 app.get("/getMetadata", (req, res) => {
 
-  get_metadata().then((metadata) => {
+ get_metadata().then((metadata) => {
 
     res.send(metadata);
   }).catch((err) => {
@@ -114,13 +142,14 @@ app.get("/getData", (req, res) => {
 
   const id = req.query.id;
   const scale = req.query.scale;
+  const datepoint = req.query.datepoint;
   if (!id)
   {
     res.status(400).send("Missing id parameter");
     return;
   }
 
-  get_data(id, scale).then((data) => {
+  get_data(id, scale, datepoint).then((data) => {
 
     res.send(data);
   }).catch((err) => {
@@ -256,5 +285,168 @@ async function parse_state(data)
         console_log("error", "Error:", error);
     }
     return true;
+}
+
+
+var fetch_ids =
+{
+    hp1_current:"sensor-hp1_-_ac_current",
+    hp1_voltage:"sensor-hp1_-_ac_voltage",
+    hp2_current:"sensor-hp2_-_ac_current",
+    hp2_voltage:"sensor-hp2_-_ac_voltage",
+
+    hp1_working_mode_set_by_cic:"sensor-hp1_-_working_mode_set_by_cic",
+    hp2_working_mode_set_by_cic:"sensor-hp2_-_working_mode_set_by_cic",
+    hp1_pump_flow:"sensor-hp1_-_pump_flow",
+    hp2_pump_flow:"sensor-hp2_-_pump_flow",
+  
+    hp1_water_in_temperature:"sensor-hp1_-_water_in_temperature",
+    hp2_water_in_temperature:"sensor-hp2_-_water_in_temperature",
+    hp1_water_out_temperature:"sensor-hp1_-_water_out_temperature",
+    hp2_water_out_temperature:"sensor-hp2_-_water_out_temperature",
+    hp1_pump_relay:"binary_sensor-hp1_-_pump_relay",
+    hp2_pump_relay:"binary_sensor-hp2_-_pump_relay",
+    hp1_pump_power:"sensor-hp1_-_pump_power",
+    hp2_pump_power:"sensor-hp2_-_pump_power",
+    hp1_bottom_heater:"binary_sensor-hp1_-_bottom_heater",
+    hp2_bottom_heater:"binary_sensor-hp2_-_bottom_heater",
+    hp1_crankcase_heater:"binary_sensor-hp1_-_crankcase_heater",
+    hp2_crankcase_heater:"binary_sensor-hp2_-_crankcase_heater",
+}
+
+const interval2 = setInterval(async function ()
+    {
+       get_realtime_power()
+    },
+    15 * 1000);
+
+
+async function get_realtime_power()
+{
+   var power_in, power_out;
+   power_in = power_out = 0.0;
+   var values = {}; 
+   for (const endpoint of Object.values(fetch_ids)) {
+        const url = endpoint.replace("-", "/");
+
+        //console_log("error",  url);
+        try {
+        
+            let response = await fetch(`http://${HEATPUMP_LISTENER_IP}/`  + url);
+            if (!response.ok) // or check for response.status
+              throw new Error(response.statusText);
+            let result = await response.json();
+            values[endpoint] = result.value;
+
+        } catch (err) {
+          console_log("error", err)
+        }     
+   }
+
+  const hp1_current = values["sensor-hp1_-_ac_current"];
+  const hp1_voltage = values["sensor-hp1_-_ac_voltage"];
+  const hp2_current = values["sensor-hp2_-_ac_current"];
+  const hp2_voltage = values["sensor-hp2_-_ac_voltage"];
+
+  const hp1_working_mode_set_by_cic = values["sensor-hp1_-_working_mode_set_by_cic"];
+  const hp2_working_mode_set_by_cic = values["sensor-hp2_-_working_mode_set_by_cic"];
+  const hp1_pump_flow = values["sensor-hp1_-_pump_flow"];
+  const hp2_pump_flow = values["sensor-hp2_-_pump_flow"];
+
+  const hp1_water_in_temperature = values["sensor-hp1_-_water_in_temperature"];
+  const hp2_water_in_temperature = values["sensor-hp2_-_water_in_temperature"];
+  const hp1_water_out_temperature = values["sensor-hp1_-_water_out_temperature"];
+  const hp2_water_out_temperature = values["sensor-hp2_-_water_out_temperature"];
+  const hp1_pump_relay = values["binary_sensor-hp1_-_pump_relay"];
+  const hp2_pump_relay = values["binary_sensor-hp2_-_pump_relay"];
+  const hp1_pump_power = values["sensor-hp1_-_pump_power"];
+  const hp2_pump_power = values["sensor-hp2_-_pump_power"];
+  const hp1_bottom_heater = values["binary_sensor-hp1_-_bottom_heater"];
+  const hp2_bottom_heater = values["binary_sensor-hp2_-_bottom_heater"];
+  const hp1_crankcase_heater = values["binary_sensor-hp1_-_crankcase_heater"];
+  const hp2_crankcase_heater = values["binary_sensor-hp2_-_crankcase_heater"];
+
+  const heat_capacity = 4.186;
+  //if (hp1_current && hp1_voltage && hp2_current && hp2_voltage)
+  {
+          /*
+    {% set standby_power = 5.15 %}
+    {% set voltage = states('sensor.modbus_quatt_hp1_ac_voltage') | float(0) %}
+    {% set current = states('sensor.modbus_quatt_hp1_ac_current') | float(0) %}
+    {% set pump_power = states('sensor.modbus_quatt_hp1_pump_power') | float(0) if is_state('binary_sensor.modbus_quatt_hp1_dc_pump_relay', 'on') else 0 %}
+    {% set bottom_plate_heater = 150 if is_state('binary_sensor.modbus_quatt_hp1_bottom_plate_heater', 'on') else 0 %}
+    {% set crank_case_heater = 40 if is_state('binary_sensor.modbus_quatt_hp1_crankcase_heater', 'on') else 0 %}
+    
+    {# 1.035 is voltage correctie #}
+    {% set comp_driver_power = 1.035 * voltage * current %}
+    
+    {# vermogensafhankelijke calibratie (gefit op daadwerkelijke data) #}
+    {% set reference_power = 400 %}
+    {% set slope = 0.00012 %}   {# ≈ +1.2% per 100W boven 400W #}
+    
+    {% set calibration = 1 + max(0, comp_driver_power - reference_power) * slope %}
+    
+    {{ (
+        standby_power
+      + comp_driver_power * calibration
+      + pump_power
+      + bottom_plate_heater
+      + crank_case_heater
+      ) | round(2)
+    }}
+          */
+    var standby_power = 5.8 ;
+    const reference_power = 400;
+    const slope = 0.00012;
+    const bottom_heater_on = 150;
+    const crankcase_heater_on = 40;
+    
+    const power1 = hp1_current * hp1_voltage ;
+    const power2 = hp2_current * hp2_voltage ;
+    const power_ = power1 + power2;
+    if ((power1 > 0 && power2 > 0) || (power1 ==  0 && power2 == 0))
+      standby_power *= 2;
+
+    const pump_power = (hp1_pump_relay ? hp1_pump_power : 0) + (hp2_pump_relay ? hp2_pump_power : 0) ;
+    const bottom_plate_heater = (hp1_bottom_heater ? bottom_heater_on : 0) +  (hp2_bottom_heater ? bottom_heater_on : 0);
+    const crankcase_heater = (hp1_crankcase_heater ? crankcase_heater_on : 0) +  (hp2_crankcase_heater ? crankcase_heater_on : 0);
+
+    const comp_driver_power = 1.017 * power_;
+    //const comp_driver_power2 = 1.035 * power2;
+    const calibration = 1 + Math.max(0, (comp_driver_power)- reference_power) * slope;
+    // const calibration2 = 1 + Math.max(0, comp_driver_power2 - reference_power) * slope;
+    power_in = standby_power +
+            (comp_driver_power) /** calibration*/ +
+          //   comp_driver_power2 * calibration2 +
+            pump_power +
+            bottom_plate_heater +
+            crankcase_heater;
+  }
+  //if (hp1_pump_flow && hp2_pump_flow && hp1_water_in_temperature && hp2_water_in_temperature &&
+   //   hp1_water_out_temperature && hp2_water_out_temperature)
+  {
+      const avg_flow = (hp1_pump_flow + hp2_pump_flow) / (3600 * 2);
+      const t_out_1 = hp1_water_out_temperature;
+      const t_out_2 = hp2_water_out_temperature;
+      const t_in_1 = hp1_water_in_temperature;
+      const t_in_2 = hp2_water_in_temperature;
+
+      const delta_t_1 = t_out_1 - t_in_1;
+      const delta_t_2 = t_out_2 - t_in_2;
+
+      power_out = 1000 * heat_capacity * avg_flow * (
+              (hp1_working_mode_set_by_cic != 0 ? delta_t_1 : 0 ) + 
+              (hp2_working_mode_set_by_cic != 0 ? delta_t_2 : 0 ));
+    
+  } 
+  console_log("error", "power in: ", power_in.toFixed(0), "Out: ", power_out.toFixed(0)); 
+
+
+  sse.send(
+      {
+        power: [ power_in, power_out ]
+      },
+      'power',
+    );
 }
 

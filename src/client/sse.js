@@ -1,4 +1,4 @@
-import { metadata } from "./main.js";
+import { metadata, current_date_point } from "./main.js";
 
 var eventSource = null;
 var reconnect_delay = 1000;
@@ -79,34 +79,49 @@ function setup_EventSource()
 
 
         // add value to chart   
-
-        if (metadata[data.element.id].chart)
+        if (current_date_point == 0)
         {
-            metadata[data.element.id].chart.data.datasets[0].data.shift();
-            const d = new Date();
-            // copy last value to avoid gaps in chart when value does change
-            if (metadata[data.element.id].chart.data.datasets[0].data.length > 0 &&
-                metadata[data.element.id].chart.data.datasets[0].data[metadata[ data.element.id].chart.data.datasets[0].data.length - 1].x
-                 - d.getTime() > 60 * 1000) // if last value is older than 1 minute, add a copy of it to avoid gaps in chart
+            if (metadata[data.element.id].chart)
             {
-                metadata[data.element.id].chart.data.datasets[0].data.push({x: d.getTime() - 1000, y:
-                    metadata[data.element.id].chart.data.datasets[0].data[
-                        metadata[data.element.id].chart.data.datasets[0].data.length - 1].y});
+                metadata[data.element.id].chart.data.datasets[0].data.shift();
+                const d = new Date();
+                // copy last value to avoid gaps in chart when value does change
+                if (metadata[data.element.id].chart.data.datasets[0].data.length > 0 &&
+                    metadata[data.element.id].chart.data.datasets[0].data[metadata[ data.element.id].chart.data.datasets[0].data.length - 1].x
+                    - d.getTime() > 60 * 1000) // if last value is older than 1 minute, add a copy of it to avoid gaps in chart
+                {
+                    metadata[data.element.id].chart.data.datasets[0].data.push({x: d.getTime() - 1000, y:
+                        metadata[data.element.id].chart.data.datasets[0].data[
+                            metadata[data.element.id].chart.data.datasets[0].data.length - 1].y});
+                }
+                metadata[data.element.id].chart.data.datasets[0].data.push({x: d.getTime(), y: data.element.value});
+                metadata[data.element.id].chart.update();
             }
-            metadata[data.element.id].chart.data.datasets[0].data.push({x: d.getTime(), y: data.element.value});
-            metadata[data.element.id].chart.update();
-        }
 
-        if (!data.initial)
-        {
-            //re order div to top
-            let parent_div = value_span.parentElement;
-            parent_div.parentElement.prepend(parent_div);
-
-
+            if (!data.initial)
+            {
+                //re order div to top
+                let parent_div = value_span.parentElement;
+                if (parent_div.parentElement.id !== "charts_selected")
+                {
+                    parent_div.parentElement.prepend(parent_div);
+                }
+            }
         }
 
     } );
+
+
+    eventSource.addEventListener('power', (e) => {
+         const data = JSON.parse(e.data);
+
+        let value_span = document.getElementsByClassName("power_5sec_id")[0];
+        value_span.innerHTML = "in: "+ data.power[0].toFixed(1) + "W";
+        value_span.innerHTML += " out: "+  data.power[1].toFixed(0)+ "W";
+        value_span.innerHTML += " cop: "+ (data.power[1] / data.power[0]).toFixed(1);
+
+            console.log("power: ", data);
+    });
 
 }
 

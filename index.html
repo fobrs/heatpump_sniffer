@@ -10,22 +10,42 @@
     <script type="module" src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.2.0/chartjs-plugin-zoom.js"></script>
     <script type="module" src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 <script>
-
+    var navigate_fn = null;
     var selectDatetime_scale_fn = null;
+    var selection_changed = null;
 </script>
   </head>
   <body>
      <h2>Quatt Duo V2 Listener</h2>
     <script type="module" src="/src/client/main.js"></script>
-    <div class="datetime_scale_select">
-                        
-        <span><input type="radio" id="all" name="datetime_scale" value="all" onclick="selectDatetime_scale_fn(event, 4, true);">All</span>
-        <span><input type="radio" id="week" name="datetime_scale" value="week" onclick="selectDatetime_scale_fn(event, 3, true);" />Week</span>
+    <div class="datetime_scale_select">   
+          <span><button type="button" id="backward_left" name="backward_left"  onclick="navigate_fn(event, -2);">
+          <span class="arrow2">❮❮</span></button></span>
+        <span><button type="button" id="backward" name="backward" value="backward" onclick="navigate_fn(event, -1);"><span class="arrow2">❮</span>
+          <!--<i class="arrow left"></i>-->
+          </button></span>                         
+        <span><input type="radio" id="all" name="datetime_scale" value="all" onclick="selectDatetime_scale_fn(event, 5, true);">All</span>
+        <span><input type="radio" id="week" name="datetime_scale" value="week" onclick="selectDatetime_scale_fn(event, 4, true);" />Week</span>
         <span><input type="radio" id="day" name="datetime_scale" value="day" onclick="selectDatetime_scale_fn(event, 2, true);" />Day</span>
         <span><input type="radio" id="hour" name="datetime_scale" value="hour" onclick="selectDatetime_scale_fn(event, 1, true);" checked />Hour</span>
-        <span><input type="radio" id="quarter_hour" name="datetime_scale" value="quarter_hour" onclick="selectDatetime_scale_fn(event, 0, true);" checked />15 Min</span>
-  
+        <span><input type="radio" id="quarter_hour" name="datetime_scale" value="quarter_hour" onclick="selectDatetime_scale_fn(event, 0, true);" checked />15 Min</span> 
+        <span><button type="button" id="foreward" name="foreward" value="foreward" onclick="navigate_fn(event, 1);">
+          <span class="arrow2">❯</span>
+          <!--<i class="arrow right"></i>-->
+          </button></span>
+        <span><button type="button" id="foreward_now" name="foreward_now" value="foreward_now" onclick="navigate_fn(event, 2);">
+        <span class="arrow2">❯❯</span></button></span>
     </div>
+<div id="charts_power">
+  <b>15 Sec Power </b><span class="power_5sec_id" > </span><br>
+</div>
+<div class="line"></div><div style="text-align:center;"><b>Combined</b></div><div class="line"></div>
+<div id="charts_multiple"></div>
+  <div class="line"></div><div style="text-align:center;"><b>Selected</b></div><div class="line"></div>
+    <div id="charts_selected"></div>
+    <div class="line"></div><div style="text-align:center;"><b>by CiC Charts</b></div><div class="line"></div>
+    <div id="charts_cic"></div>
+<div class="line"></div><div style="text-align:center;"><b>Charts</b></div><div class="line"></div>
     <div id="charts"></div>
   </body>
 </html>
