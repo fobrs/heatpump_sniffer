@@ -312,6 +312,13 @@ var fetch_ids =
     hp2_bottom_heater:"binary_sensor-hp2_-_bottom_heater",
     hp1_crankcase_heater:"binary_sensor-hp1_-_crankcase_heater",
     hp2_crankcase_heater:"binary_sensor-hp2_-_crankcase_heater",
+
+    hp1_condensing_temperature:"sensor-hp1_-_condensing_temperature",
+    hp1_evaporating_temperature:"sensor-hp1_-_evaporating_temperature",
+    hp2_condensing_temperature:"sensor-hp2_-_condensing_temperature",
+    hp2_evaporating_temperature:"sensor-hp2_-_evaporating_temperature",
+  
+
 }
 
 const interval2 = setInterval(async function ()
@@ -440,11 +447,25 @@ async function get_realtime_power()
     
   } 
   console_log("error", "power in: ", power_in.toFixed(0), "Out: ", power_out.toFixed(0)); 
+//["sensor-hp1_-_condensing_temperature"]
+//["sensor-hp1_-_evaporating_temperature"]
+  const hp1_condensing_temperature = values["sensor-hp1_-_condensing_temperature"];
+  const hp1_evaporating_temperature = values["sensor-hp1_-_evaporating_temperature"];
+  const hp2_condensing_temperature = values["sensor-hp2_-_condensing_temperature"];
+  const hp2_evaporating_temperature = values["sensor-hp2_-_evaporating_temperature"];
+ 
+  console_log("error", )
+  // Carnot_COP = (T_condensing + 273) / ((T_condensing+273) – (T_evaporating + 273))
+  const T_condensing = 273.15 + Math.max(hp1_condensing_temperature, hp2_condensing_temperature);
+  const T_evaporating = 273.15 + Math.min(hp1_evaporating_temperature, hp2_evaporating_temperature);
+  let cop_carnot =  T_condensing / (T_condensing - T_evaporating);
+
+  //console_log("error", hp1_condensing_temperature, hp1_evaporating_temperature, hp2_condensing_temperature, hp2_evaporating_temperature);
 
 
   sse.send(
       {
-        power: [ power_in, power_out ]
+        power: [ power_in, power_out, cop_carnot ]
       },
       'power',
     );

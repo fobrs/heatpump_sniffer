@@ -1,4 +1,4 @@
-import { metadata, current_date_point } from "./main.js";
+import { metadata, current_date_point, selection_chart } from "./main.js";
 
 var eventSource = null;
 var reconnect_delay = 1000;
@@ -96,6 +96,18 @@ function setup_EventSource()
                 }
                 metadata[data.element.id].chart.data.datasets[0].data.push({x: d.getTime(), y: data.element.value});
                 metadata[data.element.id].chart.update();
+
+
+                for (let i = 0; i < selection_chart.data.datasets.length; i++)
+                {
+                    if (selection_chart.data.datasets[i].id == data.element.id)
+                    {
+                        selection_chart.data.datasets[i].data = metadata[data.element.id].chart.data.datasets[0].data;
+                    }
+                }
+                selection_chart.update();
+
+
             }
 
             if (!data.initial)
@@ -118,7 +130,9 @@ function setup_EventSource()
         let value_span = document.getElementsByClassName("power_5sec_id")[0];
         value_span.innerHTML = "in: "+ data.power[0].toFixed(1) + "W";
         value_span.innerHTML += " out: "+  data.power[1].toFixed(0)+ "W";
-        value_span.innerHTML += " cop: "+ (data.power[1] / data.power[0]).toFixed(1);
+        const cop = (data.power[1] / data.power[0]);
+        value_span.innerHTML += " cop: "+ cop.toFixed(1);
+        value_span.innerHTML += " ηc: "+ (cop/data.power[2]).toFixed(2);
 
             console.log("power: ", data);
     });

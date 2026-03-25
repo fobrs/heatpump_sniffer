@@ -90,7 +90,7 @@ selection_changed = function(event) {
         let parent_div = value_span.parentElement;
         parent_div.remove();
         document.getElementById("charts_selected").prepend(parent_div);
-}
+  }
   else
   {
     selection_chart.data.datasets = selection_chart.data.datasets.filter(
@@ -101,10 +101,48 @@ selection_changed = function(event) {
     let parent_div = value_span.parentElement;
     document.getElementById("charts").prepend(parent_div);
     
-}
+  }
   selection_chart.update();
 };
 
+
+color_change = function (e)
+{
+    let id = e.id.replace("_color", "");
+
+    for (let i = 0; i < selection_chart.data.datasets.length; i++)
+    {
+        if (selection_chart.data.datasets[i].id == id)
+        {
+             selection_chart.data.datasets[i] = {
+                data: metadata[id].chart.data.datasets[0].data,
+                id: id,
+                label: '',//element.name,
+                borderColor: e.value,
+                borderWidth: 1,
+                pointRadius: datetime_scale <= datetime_scale_hour ? 2 : 0,
+                fill: false
+            };
+            break;
+        }
+    }
+    selection_chart.update();
+
+    let d = metadata[id].chart.data.datasets[0].data;
+
+    metadata[id].chart.data.datasets[0] = {
+                data: d,
+                id: id,
+                label: '',//element.name,
+                borderColor: e.value,
+                borderWidth: 1,
+                pointRadius: datetime_scale <= datetime_scale_hour ? 2 : 0,
+                fill: false
+            };
+
+    metadata[id].chart.update();
+
+}
 
 for (const element of metadata_array) {
     //console.log("Metadata element", element);
@@ -113,7 +151,7 @@ for (const element of metadata_array) {
     {
         document.querySelector("#charts_cic").innerHTML += `
       <div class="chart-container">
-        <input type="color" id="${element.id}_color" value="#90a094" class="primary_color field-radio"/>
+        <input type="color" id="${element.id}_color" value="#90a094" class="primary_color field-radio" onchange="color_change(this)"/>
         <b>${element.name} </b><span class="${element.id}" > </span><br>
         <canvas id="${element.id}" class="line-chart" width="600" height="150"></canvas>
       </div>
@@ -125,7 +163,7 @@ for (const element of metadata_array) {
         <div class="chart-container">
             <input type="checkbox" id="checkbox_${element.id}" name="checkbox_${element.id}" value="${element.id}" 
                 onclick="selection_changed(event);"/>
-            <input type="color" id="${element.id}_color" value="#90a094" class="primary_color field-radio"/>
+            <input type="color" id="${element.id}_color" value="#90a094" class="primary_color field-radio" onchange="color_change(this)"/>
             <b>${element.name} </b><span class="${element.id}" > </span><br>
             <canvas id="${element.id}" class="line-chart" width="600" height="150"></canvas>
         </div>
@@ -142,16 +180,19 @@ for (const element of metadata_array) {
 
 for (const element of metadata_array) {
 
-    var res = await fetch("/getData?id=" + element.id + "&scale=" + datetime_scale + "&datepoint=" + current_date_point, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            });
-    var resp = await res.json();
+    try  {
+        var res = await fetch("/getData?id=" + element.id + "&scale=" + datetime_scale + "&datepoint=" + current_date_point, {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                });
+        var resp = await res.json();
+    }
+    catch (e)
+    {
 
-       
-    
+    }
     metadata[element.id].chart = new_chart(element.id);
      
  //   console.log("Data for element", element.id, resp);
@@ -202,6 +243,46 @@ navigate_fn = async function( event, direction)
 
 }
 
+async function reload_data_get()
+{
+    for (const element of metadata_array) {
+        try {
+        var res = await fetch("/getData?id=" + element.id + "&scale=" + datetime_scale +
+                                                            "&datepoint=" + current_date_point, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+            var resp = await res.json();
+        
+
+            if (metadata[element.id].chart)
+            {
+                metadata[element.id].chart.data.datasets[0].pointRadius = datetime_scale <= datetime_scale_hour ? 2 : 0;
+                metadata[element.id].chart.data.datasets[0].data = resp;
+                metadata[element.id].chart.update();
+            }
+
+            for (let i = 0; i < selection_chart.data.datasets.length; i++)
+            {
+                if (selection_chart.data.datasets[i].id == element.id)
+                {
+                    selection_chart.data.datasets[i].pointRadius = datetime_scale <= datetime_scale_hour ? 2 : 0;
+                    selection_chart.data.datasets[i].data = metadata[element.id].chart.data.datasets[0].data;
+                    break;
+                }
+            }
+        }
+        catch (e)
+        {
+
+        }        
+    }
+    selection_chart.update();
+    
+}
+
 selectDatetime_scale_fn = async function(event, s, clear, date_point)
 {
     if (event)
@@ -213,25 +294,9 @@ selectDatetime_scale_fn = async function(event, s, clear, date_point)
     console.log('selectDatetime_scale_fn '+ s);
 
     datetime_scale = s;
-    for (const element of metadata_array) {
 
-        var res = await fetch("/getData?id=" + element.id + "&scale=" + datetime_scale +
-                                                            "&datepoint=" + current_date_point, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            });
-        var resp = await res.json();
-    
-
-        if (metadata[element.id].chart)
-        {
-            metadata[element.id].chart.data.datasets[0].pointRadius = datetime_scale <= datetime_scale_hour ? 2 : 0;
-            metadata[element.id].chart.data.datasets[0].data = resp;
-            metadata[element.id].chart.update();
-        }
-    }
+    reload_data_get();
+ 
     add_power_chart();
 
 }
@@ -253,7 +318,8 @@ export {
     datetime_scale_week,
     datetime_scale_all,
     reload_data,
-    current_date_point
+    current_date_point,
+    selection_chart
  };
 
 
@@ -334,6 +400,7 @@ function new_chart(element_id)
 
  const interval = setInterval(async function ()
     {
+    reload_data_get();
        add_power_chart();
     }, 30 * 1000);
 
@@ -366,7 +433,7 @@ function add_power_chart()
     
     const heat_capacity = 4.186;
     const power_data = [];
-    if (hp1_current && hp1_voltage && hp2_current && hp2_voltage) {
+    if (true /*(hp1_current || hp2_current) && hp1_voltage && hp2_voltage*/ ) {
        /*
 {% set standby_power = 5.15 %}
 {% set voltage = states('sensor.modbus_quatt_hp1_ac_voltage') | float(0) %}
@@ -500,8 +567,6 @@ function add_power_chart()
         value_span.innerHTML = "in: "+ power_data[power_data.length-1].y.toFixed(0) + "W";
         value_span.innerHTML += " out: "+ power_out_data[power_out_data.length-1].y.toFixed(0)+ "W";
         value_span.innerHTML += " cop: "+ (cop_data[cop_data.length-1].y / 1000).toFixed(1);
-
-        
     }
     powerchart.update();
 
