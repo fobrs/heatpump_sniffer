@@ -11,7 +11,7 @@ const datetime_scale_day = 2;
 const datetime_scale_yesterday = 3;
 const datetime_scale_week = 4;
 const datetime_scale_all = 5;
-
+var metadata = {};
 
 dotenv.config({ path: './src/server/.env.local' });
 const {
@@ -23,6 +23,7 @@ const {
 
 var conn = null;
 var fields = []; // field names in cardinal order, get from database to be sure of correct order when insert data
+var fields_dict = {};
 
 const pool = mariadb.createPool({
     host: DATABASE_HOST,
@@ -159,8 +160,9 @@ async function prepare_db(id_object_dict)
             var fields = [];
             row5.forEach(row => {
                 fields.push(row.COLUMN_NAME);
+                fields_dict[row.COLUMN_NAME] = 1;
             });
-            //console_log("database",  "Fields in cardinal order: ", fields);
+            console_log("database",  "Fields in cardinal order: ", fields);
       }
       catch (err) {
           errr = true;
@@ -187,6 +189,12 @@ async function prepare_db(id_object_dict)
 //      if (conn)
 //          conn.end();
   }
+
+  metadata = await get_metadata();
+
+  console_log("database", "metadata: ", metadata);
+
+
 }
 
 var ids_in_cardinal_order = [];
@@ -202,22 +210,38 @@ async function save_to_db(id_object_dict, id_value_dict, diff)
   
       try {
 
-          //console_log("database",  id_value_dict);
+          console_log("database",  id_value_dict);
           let obj = [];
           let values = "";
           if (ids_in_cardinal_order.length == 0)
           {
-            const ids = Object.keys(id_object_dict);
+            const _ids = Object.keys(id_object_dict);
+            let ids = [];
+
+            for (let i = 0; i < _ids.length; i++)
+            {
+                if ((_ids[i] in fields_dict))
+                {
+                    console_log("database", "take: ", _ids[i]);
+                    ids.push(_ids[i]);                    
+                }
+                else
+                {
+                    console_log("database", "skip: ", _ids[i]);
+                }
+            }
+
             // order ids by fields in database to be sure of correct order when insert data
             ids.sort((a, b) => {
                 let indexA = fields.indexOf(a);
                 let indexB = fields.indexOf(b);
                 return indexA - indexB;
             });
-            //console_log("database",  "Sorted ids: ", ids);
-            ids_in_cardinal_order = ids;
-          }
+            console_log("database",  "Sorted ids: ", ids);
 
+           ids_in_cardinal_order = ids;
+          }
+         
           obj.push(new Date);
           
           ids_in_cardinal_order.forEach(element => { 
@@ -237,7 +261,7 @@ async function save_to_db(id_object_dict, id_value_dict, diff)
           arr.unshift(0);
 
 
-          //console_log("database",  arr);
+          console_log("database",  arr);
 
           _sql = sql`INSERT INTO heatpump_modbus values (${values})`
 
@@ -274,6 +298,12 @@ async function save_to_db(id_object_dict, id_value_dict, diff)
 
 async function get_metadata()
 {
+
+  if (metadata.length > 0)
+  {
+    return metadata;
+  }
+
   var errr = false;
   try {
      if (!conn || !conn.isValid())
@@ -282,7 +312,25 @@ async function get_metadata()
             var _sql =  sql`SELECT data FROM heatpump_modbus_metadata LIMIT 1`;
             const row = await conn.query(_sql);
             if (row.length > 0) {
-                return row[0].data;
+
+                // filter ids out not in fields_dict
+                let _metadata = {};
+                //console_log("error", row[0].data);
+
+                for (var key in row[0].data) {
+                    if (row[0].data.hasOwnProperty(key))
+                    {  
+                        if (key in fields_dict)
+                        {
+                            _metadata[key] = row[0].data[key];
+                        }
+                        else
+                        {
+                            console_log("error", key + " SKIP " + row[0].data[key]);
+                        }
+                    }
+                }
+                return _metadata;
             }
             return null;
         }

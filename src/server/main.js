@@ -129,7 +129,7 @@ app.get("/getState", (req, res) => {
 
 app.get("/getMetadata", (req, res) => {
 
- get_metadata().then((metadata) => {
+    get_metadata().then((metadata) => {
 
     res.send(metadata);
   }).catch((err) => {
